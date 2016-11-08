@@ -116,10 +116,4 @@
  */
 
 
-#pragma mark phonebookDelegate
--(void)choosePerson:(NSString *)phone{
-    self.textView.text = [self.textView.text stringByAppendingFormat:@"%@\n",phone];
-}
-
-
 @end
