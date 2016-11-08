@@ -10,9 +10,6 @@
 #import <Contacts/Contacts.h>
 #import <ContactsUI/ContactsUI.h>
 
-#import "Contacts.h"
-
-
 @interface ViewController ()<CNContactPickerDelegate>
 
 @property (nonatomic,strong)UITextView * textView;
@@ -38,6 +35,7 @@
     [self.view addSubview:btn2];
     
     self.textView = [[UITextView alloc]initWithFrame:CGRectMake(0, 200, self.view.frame.size.width, self.view.frame.size.height - 200)];
+    self.textView.text = @"";
     [self.view addSubview:self.textView];
     self.textView.editable = NO;
     
@@ -51,8 +49,39 @@
     [self presentViewController:picker animated:YES completion:nil];
 }
 -(void)getPhonebookData:(UIButton *)sender{
-    
-    
+    //判断授权
+    if ([CNContactStore authorizationStatusForEntityType:CNEntityTypeContacts] == CNAuthorizationStatusNotDetermined || [CNContactStore authorizationStatusForEntityType:CNEntityTypeContacts] ==  CNAuthorizationStatusAuthorized) {
+        
+        CNContactStore *store = [[CNContactStore alloc] init];
+        [store requestAccessForEntityType:CNEntityTypeContacts completionHandler:^(BOOL granted, NSError * _Nullable error) {
+            if (granted) {
+                NSLog(@"授权成功");
+                // 获取联系人
+                CNContactStore * store = [[CNContactStore alloc] init];
+                //创建请求对象
+                NSArray * keys = @[CNContactGivenNameKey, CNContactFamilyNameKey, CNContactPhoneNumbersKey];
+                CNContactFetchRequest * request = [[CNContactFetchRequest alloc] initWithKeysToFetch:keys];
+                
+                //发送请求
+                [store enumerateContactsWithFetchRequest:request error:nil usingBlock:^(CNContact * _Nonnull contact, BOOL * _Nonnull stop) {
+                    
+                    //主线程刷新ui
+                    dispatch_async(dispatch_get_main_queue(),^{
+                        self.textView.text = [self.textView.text stringByAppendingFormat:@"\n%@-%@\n",contact.givenName, contact.familyName];
+                    });
+                    
+                    for (CNLabeledValue * labelValue in contact.phoneNumbers) {
+                        CNPhoneNumber * number = labelValue.value;
+                        dispatch_async(dispatch_get_main_queue(),^{
+                        self.textView.text = [self.textView.text stringByAppendingFormat:@"%@\n",number.stringValue];
+                        });
+                    }
+                }];
+            } else {
+                NSLog(@"获取授权失败");
+            }
+        }];
+    }
 }
 
 - (void)contactPickerDidCancel:(CNContactPickerViewController *)picker{
